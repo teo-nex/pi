@@ -21,4 +21,16 @@ describe("resource formatting helpers", () => {
 			formatPromptTemplateInvocation({ name: "review", content: "Review $1 with $ARGUMENTS" }, ["a.ts", "care"]),
 		).toBe("Review a.ts with a.ts care");
 	});
+	it.each(["$1", "$@", "$ARGUMENTS", "$" + "{@:1}", "$" + "{@:2}"])(
+		"keeps placeholder-like argument %s literal",
+		(literal) => {
+			const template = { name: "literal", content: "$1 | $" + "{@:1:1}" };
+			expect(formatPromptTemplateInvocation(template, [literal, "tail"])).toBe(`${literal} | ${literal}`);
+		},
+	);
+
+	it.each(["$$", "$&", "$`", "$'"])("keeps replacement metacharacters %s literal", (literal) => {
+		const template = { name: "literal", content: "before $ARGUMENTS | $@ after" };
+		expect(formatPromptTemplateInvocation(template, [literal])).toBe(`before ${literal} | ${literal} after`);
+	});
 });
