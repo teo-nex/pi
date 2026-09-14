@@ -1,0 +1,44 @@
+name: Prompt argument contribution validation
+on:
+  push:
+    branches: [ci/prompt-argument-literals]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        revision: [before, after]
+    steps:
+      - name: Read validation plan
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: plan
+          persist-credentials: false
+          sparse-checkout: .contribution
+      - name: Check out unchanged Pi
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: earendil-works/pi
+          ref: ceea48f5d5d12fd7915dfefba2835ccd55f23bb9
+          path: project
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Install system test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep
+          sudo ln -s /usr/bin/fdfind /usr/local/bin/fd
+      - name: Install dependencies without lifecycle scripts
+        working-directory: project
+        run: npm ci --ignore-scripts
+      - name: Apply candidate in runner and validate
+        working-directory: project
+        run: node ../plan/.contribution/validate.mjs ../plan/.contribution/changes.json ${{ matrix.revision }}
